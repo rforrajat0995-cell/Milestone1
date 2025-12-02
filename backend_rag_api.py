@@ -138,15 +138,19 @@ def list_funds():
 
 
 if __name__ == '__main__':
+    # Get port from environment variable (for Railway/Heroku) or default to 5000
+    port = int(os.getenv('PORT', 5000))
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    
     print("="*70)
     print("Mutual Fund FAQ Assistant - RAG Backend API")
     print("="*70)
-    print("\nStarting server on http://localhost:5000")
+    print(f"\nStarting server on port {port}")
     print("\nEndpoints:")
     print("  POST /query - Answer queries about mutual funds (RAG)")
     print("  GET  /funds - List all available funds")
     print("  GET  /health - Health check")
     print("\n" + "="*70 + "\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)
 
