@@ -2,17 +2,39 @@
 Backend API for the mutual fund FAQ assistant using RAG
 """
 
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import logging
 import os
+import sys
 
-from rag_pipeline import RAGPipeline
-import config_rag
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
+# Setup logging first - before any imports that might fail
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger(__name__)
+
+logger.info("="*70)
+logger.info("Initializing backend_rag_api module...")
+logger.info("="*70)
+
+try:
+    from flask import Flask, request, jsonify
+    from flask_cors import CORS
+    logger.info("✓ Flask and CORS imported successfully")
+except Exception as e:
+    logger.error(f"✗ Failed to import Flask: {e}", exc_info=True)
+    raise
+
+try:
+    from rag_pipeline import RAGPipeline
+    import config_rag
+    logger.info("✓ RAG pipeline modules imported successfully")
+except Exception as e:
+    logger.warning(f"⚠ Failed to import RAG modules: {e}")
+    logger.warning("⚠ App will start but RAG features won't work")
+    RAGPipeline = None
+    config_rag = None
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -25,8 +47,16 @@ _rag_initialization_error = None
 def get_rag_pipeline():
     """Lazy initialization of RAG pipeline"""
     global rag_pipeline, _rag_initialization_error
+    
+    if RAGPipeline is None:
+        logger.warning("RAGPipeline not available (import failed)")
+        return None
+    
     if rag_pipeline is None and _rag_initialization_error is None:
-        api_key = os.getenv("GOOGLE_API_KEY") or config_rag.GOOGLE_API_KEY
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if config_rag:
+            api_key = api_key or getattr(config_rag, 'GOOGLE_API_KEY', None)
+        
         if not api_key:
             logger.warning("No Google API key found. RAG pipeline may not work correctly.")
             _rag_initialization_error = "No API key"
