@@ -18,26 +18,35 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for frontend integration
 
-# Initialize RAG pipeline
-api_key = os.getenv("GOOGLE_API_KEY") or config_rag.GOOGLE_API_KEY
-if not api_key:
-    logger.warning("No Google API key found. RAG pipeline may not work correctly.")
+# Initialize RAG pipeline (lazy initialization - will be created on first use)
+rag_pipeline = None
 
-try:
-    rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=True)
-    logger.info("RAG pipeline initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize RAG pipeline: {e}")
-    rag_pipeline = None
+def get_rag_pipeline():
+    """Lazy initialization of RAG pipeline"""
+    global rag_pipeline
+    if rag_pipeline is None:
+        api_key = os.getenv("GOOGLE_API_KEY") or config_rag.GOOGLE_API_KEY
+        if not api_key:
+            logger.warning("No Google API key found. RAG pipeline may not work correctly.")
+            return None
+        
+        try:
+            rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=True)
+            logger.info("RAG pipeline initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize RAG pipeline: {e}", exc_info=True)
+            rag_pipeline = None
+    return rag_pipeline
 
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    pipeline = get_rag_pipeline()
     return jsonify({
         "status": "healthy",
         "service": "Mutual Fund FAQ Assistant (RAG)",
-        "rag_ready": rag_pipeline is not None
+        "rag_ready": pipeline is not None
     })
 
 
@@ -60,10 +69,11 @@ def handle_query():
         "retrieved_chunks": 5
     }
     """
-    if not rag_pipeline:
+    pipeline = get_rag_pipeline()
+    if not pipeline:
         return jsonify({
             "success": False,
-            "error": "RAG pipeline not initialized"
+            "error": "RAG pipeline not initialized. Please check logs and ensure data is initialized."
         }), 500
     
     try:
@@ -86,7 +96,7 @@ def handle_query():
         logger.info(f"Received query: {query}")
         
         # Process query using RAG
-        response = rag_pipeline.answer_query(query)
+        response = pipeline.answer_query(query)
         
         # Format response for frontend
         formatted_response = {
@@ -137,6 +147,7 @@ def list_funds():
         }), 500
 
 
+# This ensures the app can be imported by gunicorn
 if __name__ == '__main__':
     # Get port from environment variable (for Railway/Heroku) or default to 5000
     port = int(os.getenv('PORT', 5000))
