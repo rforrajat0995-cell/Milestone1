@@ -2,16 +2,20 @@
 
 ## 🚀 Fast Track Deployment (15 minutes)
 
-### Backend (Railway) - 5 minutes
+### Backend (Render) - 5 minutes
 
-1. ✅ Go to [railway.app](https://railway.app) → Sign up with GitHub
-2. ✅ New Project → Deploy from GitHub → Select `rforrajat0995-cell/Milestone1`
-3. ✅ Variables tab → Add:
+1. ✅ Go to [render.com](https://render.com) → Sign up with GitHub
+2. ✅ New → Web Service → Connect GitHub → Select `rforrajat0995-cell/Milestone1`
+3. ✅ Configure:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `python backend_rag_api.py`
+   - Plan: Free
+4. ✅ Environment Variables → Add:
    - `GOOGLE_API_KEY=your_key`
    - `PORT=5000`
-4. ✅ Settings → Start Command: `python backend_rag_api.py`
-5. ✅ Copy backend URL (e.g., `https://xxx.railway.app`)
-6. ✅ Initialize data: Railway CLI → `railway run python main.py && railway run python build_rag_index.py`
+5. ✅ Create Web Service → Wait for deployment
+6. ✅ Copy backend URL (e.g., `https://xxx.onrender.com`)
+7. ✅ Initialize data: Render Shell → `python main.py && python build_rag_index.py`
 
 ### Frontend (Vercel) - 5 minutes
 
@@ -29,7 +33,7 @@
 
 1. ✅ Visit frontend URL
 2. ✅ Test query: "What's the exit load of Parag Parikh Arbitrage Fund?"
-3. ✅ Check backend health: `https://xxx.railway.app/health`
+3. ✅ Check backend health: `https://xxx.onrender.com/health`
 
 ## 🎉 Done!
 
