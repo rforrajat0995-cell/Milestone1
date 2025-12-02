@@ -20,34 +20,51 @@ CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for frontend integ
 
 # Initialize RAG pipeline (lazy initialization - will be created on first use)
 rag_pipeline = None
+_rag_initialization_error = None
 
 def get_rag_pipeline():
     """Lazy initialization of RAG pipeline"""
-    global rag_pipeline
-    if rag_pipeline is None:
+    global rag_pipeline, _rag_initialization_error
+    if rag_pipeline is None and _rag_initialization_error is None:
         api_key = os.getenv("GOOGLE_API_KEY") or config_rag.GOOGLE_API_KEY
         if not api_key:
             logger.warning("No Google API key found. RAG pipeline may not work correctly.")
+            _rag_initialization_error = "No API key"
             return None
         
         try:
+            logger.info("Attempting to initialize RAG pipeline...")
             rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=True)
             logger.info("RAG pipeline initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize RAG pipeline: {e}", exc_info=True)
+            _rag_initialization_error = str(e)
             rag_pipeline = None
+    elif _rag_initialization_error:
+        return None
     return rag_pipeline
 
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
-    pipeline = get_rag_pipeline()
-    return jsonify({
-        "status": "healthy",
-        "service": "Mutual Fund FAQ Assistant (RAG)",
-        "rag_ready": pipeline is not None
-    })
+    """Health check endpoint - must work even if RAG pipeline fails"""
+    try:
+        pipeline = get_rag_pipeline()
+        return jsonify({
+            "status": "healthy",
+            "service": "Mutual Fund FAQ Assistant (RAG)",
+            "rag_ready": pipeline is not None,
+            "message": "Service is running. RAG pipeline may need data initialization."
+        })
+    except Exception as e:
+        # Health check should always succeed
+        logger.error(f"Error in health check: {e}")
+        return jsonify({
+            "status": "healthy",
+            "service": "Mutual Fund FAQ Assistant (RAG)",
+            "rag_ready": False,
+            "error": "RAG pipeline not ready"
+        }), 200
 
 
 @app.route('/query', methods=['POST'])
