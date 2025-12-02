@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Data files
+data/raw/
+data/processed/*.json
+!data/processed/.gitkeep
+# Exclude vector database (large binary files)
+data/vector_db/
+# Keep funds_database.json (needed for deployment)
+!data/storage/funds_database.json
+
+# Logs
+*.log
+scraper.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.DS_Store
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+.Python

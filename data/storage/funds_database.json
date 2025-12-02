@@ -1,0 +1,96 @@
+{
+  "metadata": {
+    "scraped_at": "2025-11-20T22:47:20.273968",
+    "total_funds": 7,
+    "source": "groww.in",
+    "amc": "Parag Parikh AMC",
+    "valid_funds": 7,
+    "invalid_funds": 0
+  },
+  "funds": {
+    "Parag Parikh Flexi Cap Fund Direct Growth": {
+      "source_url": "https://groww.in/mutual-funds/parag-parikh-long-term-value-fund-direct-growth",
+      "expense_ratio": "0.63%",
+      "exit_load": "For units above 10% of the investment, exit load of 2% if redeemed within 365 days and 1% if redeemed after 365 days but on or before 730 days.",
+      "minimum_sip": "₹1000",
+      "lock_in": "N/A",
+      "riskometer": "Very High Risk",
+      "benchmark": "NIFTY 500 Total Return Index",
+      "fund_name": "Parag Parikh Flexi Cap Fund Direct Growth",
+      "validation_status": "valid",
+      "validation_errors": []
+    },
+    "Parag Parikh ELSS Tax Saver Fund Direct Growth": {
+      "source_url": "https://groww.in/mutual-funds/parag-parikh-elss-tax-saver-fund-direct-growth",
+      "expense_ratio": "0.62%",
+      "exit_load": "Nil",
+      "minimum_sip": "₹1000",
+      "lock_in": "3Y",
+      "riskometer": "Moderately High Risk",
+      "benchmark": "NIFTY 500 Total Return Index",
+      "fund_name": "Parag Parikh ELSS Tax Saver Fund Direct Growth",
+      "validation_status": "valid",
+      "validation_errors": []
+    },
+    "Parag Parikh Conservative Hybrid Fund Direct Growth": {
+      "source_url": "https://groww.in/mutual-funds/parag-parikh-conservative-hybrid-fund-direct-growth",
+      "expense_ratio": "0.34%",
+      "exit_load": "For units in excess of 10% of the investment,1% will be charged for redemption within 365 days",
+      "minimum_sip": "₹1000",
+      "lock_in": "N/A",
+      "riskometer": "Moderately High Risk",
+      "benchmark": "CRISIL Hybrid 85+15 Conservative Index",
+      "fund_name": "Parag Parikh Conservative Hybrid Fund Direct Growth",
+      "validation_status": "valid",
+      "validation_errors": []
+    },
+    "Parag Parikh Liquid Fund Direct Growth": {
+      "source_url": "https://groww.in/mutual-funds/parag-parikh-liquid-fund-direct-growth",
+      "expense_ratio": "0.1%",
+      "exit_load": "Exit load of 0.0070% if redeemed within 1 day, 0.0065% if redeemed within 2 days, 0.0060% if redeemed within 3 days, 0.0055% if redeemed within 4 days, 0.0050% if redeemed within 5 days, 0.0045% if redeemed within 6 days.",
+      "minimum_sip": "₹1000",
+      "lock_in": "N/A",
+      "riskometer": "Moderate Risk",
+      "benchmark": "CRISIL Liquid Debt A-I Index",
+      "fund_name": "Parag Parikh Liquid Fund Direct Growth",
+      "validation_status": "valid",
+      "validation_errors": []
+    },
+    "Parag Parikh Arbitrage Fund Direct Growth": {
+      "source_url": "https://groww.in/mutual-funds/parag-parikh-arbitrage-fund-direct-growth",
+      "expense_ratio": "0.3%",
+      "exit_load": "Exit load of 0.25%, if redeemed within 30 days.",
+      "minimum_sip": "₹1000",
+      "lock_in": "N/A",
+      "riskometer": "Low Risk",
+      "benchmark": "NIFTY 50 Arbitrage Total Return Index",
+      "fund_name": "Parag Parikh Arbitrage Fund Direct Growth",
+      "validation_status": "valid",
+      "validation_errors": []
+    },
+    "Parag Parikh Dynamic Asset Allocation Fund Direct Growth": {
+      "source_url": "https://groww.in/mutual-funds/parag-parikh-dynamic-asset-allocation-fund-direct-growth",
+      "expense_ratio": "0.33%",
+      "exit_load": "Exit Load for units in excess of 10% of the investment,1% will be charged for redemption within 1 year.",
+      "minimum_sip": "₹1000",
+      "lock_in": "N/A",
+      "riskometer": "Moderate Risk",
+      "benchmark": "CRISIL Hybrid 50+50 Moderate Index",
+      "fund_name": "Parag Parikh Dynamic Asset Allocation Fund Direct Growth",
+      "validation_status": "valid",
+      "validation_errors": []
+    },
+    "Parag Parikh Long Term Value Fund Direct Growth": {
+      "source_url": "https://groww.in/mutual-funds/parag-parikh-long-term-value-fund-direct-growth",
+      "expense_ratio": "0.63%",
+      "exit_load": "For units above 10% of the investment, exit load of 2% if redeemed within 365 days and 1% if redeemed after 365 days but on or before 730 days.",
+      "minimum_sip": "₹1000",
+      "lock_in": "N/A",
+      "riskometer": "Very High Risk",
+      "benchmark": "NIFTY 500 Total Return Index",
+      "fund_name": "Parag Parikh Long Term Value Fund Direct Growth",
+      "validation_status": "valid",
+      "validation_errors": []
+    }
+  }
+}
