@@ -204,40 +204,40 @@ Returns list of all available funds in the database.
 
 ## 🚢 Deployment
 
-### Backend Deployment (Railway)
+### Deploy Everything on Vercel (Recommended)
 
-1. **Sign up at [Railway.app](https://railway.app)**
-2. **Create New Project** → Deploy from GitHub
-3. **Select your repository**
-4. **Add Environment Variables:**
-   - `GOOGLE_API_KEY`: Your Google Gemini API key
-5. **Railway will auto-detect Python** and install dependencies
-6. **Set Start Command:** `python backend_rag_api.py`
-7. **Note the backend URL** (e.g., `https://your-app.railway.app`)
+**Complete guide**: See [VERCEL_ONLY_DEPLOY.md](VERCEL_ONLY_DEPLOY.md)
 
-### Frontend Deployment (Vercel)
+**Quick Steps:**
 
-1. **Sign up at [Vercel.com](https://vercel.com)**
-2. **Import project** from GitHub
-3. **Configure Build Settings:**
-   - Framework Preset: Vite
-   - Build Command: `cd frontend && npm install && npm run build`
-   - Output Directory: `frontend/dist`
-4. **Add Environment Variable:**
-   - `VITE_API_BASE_URL`: Your Railway backend URL
-5. **Deploy**
+1. **Pre-build data locally:**
+   ```bash
+   python main.py
+   python build_rag_index.py
+   ```
 
-### Data Initialization on Deployment
+2. **Commit data files:**
+   ```bash
+   git add data/storage/funds_database.json data/vector_db/
+   git commit -m "Add pre-built data"
+   git push
+   ```
 
-Since `data/vector_db/` is not in Git, you need to initialize it on the server:
+3. **Deploy to Vercel:**
+   - Go to [vercel.com](https://vercel.com)
+   - Import from GitHub
+   - Add environment variable: `GOOGLE_API_KEY`
+   - Deploy
 
-**Option 1: Run on Railway (Recommended)**
-- Add a startup script that runs `python main.py` and `python build_rag_index.py` on first deploy
-- Or use Railway's one-off commands
+**That's it!** Both frontend and backend deploy together on Vercel.
 
-**Option 2: Pre-build and Upload**
-- Build the vector DB locally
-- Upload `data/vector_db/` and `data/storage/funds_database.json` to Railway
+### Alternative: Hybrid Deployment
+
+If you prefer separate platforms:
+- **Backend**: Render (free tier) or Railway (paid)
+- **Frontend**: Vercel (free tier)
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
 
 ## 🔒 Security
 

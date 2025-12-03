@@ -23,6 +23,11 @@
       "dest": "/frontend/$1"
     }
   ],
+  "functions": {
+    "api/**/*.py": {
+      "maxDuration": 60
+    }
+  },
   "env": {
     "PYTHON_VERSION": "3.12"
   }

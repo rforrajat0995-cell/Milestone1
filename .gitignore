@@ -27,8 +27,8 @@ wheels/
 data/raw/
 data/processed/*.json
 !data/processed/.gitkeep
-# Exclude vector database (large binary files)
-data/vector_db/
+# Keep vector_db for Vercel deployment (pre-built)
+# data/vector_db/ - COMMENTED OUT for Vercel
 # Keep funds_database.json (needed for deployment)
 !data/storage/funds_database.json
 

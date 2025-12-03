@@ -16,7 +16,8 @@ GEMINI_LLM_MODEL = "models/gemini-2.0-flash"  # Fast and cost-effective. Options
 
 # Vector Database Configuration
 VECTOR_DB_TYPE = "chroma"  # Options: "chroma", "faiss", "memory"
-VECTOR_DB_PATH = "data/vector_db"
+# Use /tmp for Vercel, data/vector_db for local development
+VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH", "data/vector_db")
 
 # RAG Configuration
 CHUNK_SIZE = 500  # Characters per chunk

@@ -380,9 +380,8 @@ def initialize_data():
         }), 500
 
 
-# This ensures the app can be imported by gunicorn
+# For local development only
 if __name__ == '__main__':
-    # Get port from environment variable (for Railway/Heroku) or default to 5000
     port = int(os.getenv('PORT', 5000))
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
