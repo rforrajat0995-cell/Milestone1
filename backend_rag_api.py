@@ -270,15 +270,56 @@ def initialize_data():
     try:
         # Check if data already exists
         from data_storage import DataStorage
+        import os.path as path
         storage = DataStorage()
         existing_data = storage.load_data()
         
+        # Check if vector DB exists
+        vector_db_exists = path.exists(config_rag.VECTOR_DB_PATH) if config_rag else False
+        
+        if existing_data and existing_data.get("funds") and vector_db_exists:
+            # Check if vector DB has data
+            try:
+                import chromadb
+                client = chromadb.PersistentClient(path=config_rag.VECTOR_DB_PATH)
+                collections = client.list_collections()
+                if collections:
+                    logger.info("Data and vector DB already exist, skipping initialization")
+                    return jsonify({
+                        "success": True,
+                        "message": "Data already initialized",
+                        "funds_count": len(existing_data.get("funds", {})),
+                        "vector_db_collections": len(collections)
+                    }), 200
+            except Exception as e:
+                logger.warning(f"Vector DB check failed: {e}, will rebuild index")
+        
+        # If data exists but vector DB doesn't, just rebuild index
         if existing_data and existing_data.get("funds"):
-            logger.info("Data already exists, skipping initialization")
+            logger.info("Data exists but vector DB missing, rebuilding index only...")
+            # Skip scraper, just build index
+            result2 = subprocess.run(
+                [sys.executable, 'build_rag_index.py'], 
+                capture_output=True, 
+                text=True, 
+                timeout=600,
+                cwd=os.getcwd()
+            )
+            
+            if result2.returncode != 0:
+                logger.error(f"Index builder failed: {result2.stderr}")
+                return jsonify({
+                    "success": False,
+                    "error": "Index builder failed",
+                    "details": result2.stderr[-500:] if result2.stderr else "Unknown error"
+                }), 500
+            
+            logger.info("Index rebuilt successfully")
             return jsonify({
                 "success": True,
-                "message": "Data already initialized",
-                "funds_count": len(existing_data.get("funds", {}))
+                "message": "Vector index rebuilt successfully",
+                "funds_count": len(existing_data.get("funds", {})),
+                "index_output": result2.stdout[-200:] if result2.stdout else "No output"
             }), 200
         
         # Run scraper
