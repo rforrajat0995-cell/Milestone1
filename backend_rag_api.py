@@ -96,11 +96,13 @@ def health_check():
     """Health check endpoint - must work even if RAG pipeline fails"""
     try:
         pipeline = get_rag_pipeline()
+        global _rag_initialization_error
         return jsonify({
             "status": "healthy",
             "service": "Mutual Fund FAQ Assistant (RAG)",
             "rag_ready": pipeline is not None,
-            "message": "Service is running. RAG pipeline may need data initialization."
+            "rag_error": _rag_initialization_error if _rag_initialization_error else None,
+            "message": "Service is running. RAG pipeline may need data initialization." if not pipeline else "Service is fully operational."
         })
     except Exception as e:
         # Health check should always succeed
@@ -111,6 +113,49 @@ def health_check():
             "rag_ready": False,
             "error": "RAG pipeline not ready"
         }), 200
+
+
+@app.route('/debug/rag-status', methods=['GET'])
+def debug_rag_status():
+    """Debug endpoint to check RAG pipeline initialization status"""
+    import os
+    import os.path as path
+    
+    global rag_pipeline, _rag_initialization_error
+    
+    debug_info = {
+        "rag_pipeline_initialized": rag_pipeline is not None,
+        "initialization_error": _rag_initialization_error,
+        "api_key_set": bool(os.getenv("GOOGLE_API_KEY")),
+        "vector_db_path": config_rag.VECTOR_DB_PATH if config_rag else "N/A",
+        "vector_db_exists": path.exists(config_rag.VECTOR_DB_PATH) if config_rag else False,
+        "data_storage_exists": path.exists("data/storage/funds_database.json"),
+    }
+    
+    # Try to get more info
+    try:
+        from data_storage import DataStorage
+        storage = DataStorage()
+        data = storage.load_data()
+        debug_info["funds_in_storage"] = len(data.get("funds", {})) if data else 0
+    except Exception as e:
+        debug_info["storage_error"] = str(e)
+    
+    # Check vector store
+    try:
+        if path.exists(config_rag.VECTOR_DB_PATH):
+            import chromadb
+            client = chromadb.PersistentClient(path=config_rag.VECTOR_DB_PATH)
+            collections = client.list_collections()
+            debug_info["vector_db_collections"] = [c.name for c in collections]
+            debug_info["vector_db_collection_count"] = len(collections)
+        else:
+            debug_info["vector_db_collections"] = []
+            debug_info["vector_db_collection_count"] = 0
+    except Exception as e:
+        debug_info["vector_db_error"] = str(e)
+    
+    return jsonify(debug_info), 200
 
 
 @app.route('/query', methods=['POST'])
