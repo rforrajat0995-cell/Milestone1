@@ -9,8 +9,14 @@ from datetime import datetime
 from typing import Dict, List, Optional
 import logging
 
-from scraper import GrowwMFScraper
-import config
+# Only import scraper when actually needed (not in API functions)
+try:
+    from scraper import GrowwMFScraper
+    import config
+    SCRAPER_AVAILABLE = True
+except ImportError:
+    SCRAPER_AVAILABLE = False
+    # Scraper not needed in API functions
 
 logger = logging.getLogger(__name__)
 
