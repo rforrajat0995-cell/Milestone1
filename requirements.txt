@@ -5,14 +5,9 @@
 google-generativeai>=0.3.0
 python-dotenv>=1.0.0
 
-# ChromaDB - use minimal installation
-# Exclude heavy optional dependencies
-chromadb>=0.4.0 --no-deps
-# Core ChromaDB dependencies only
-pypika>=0.48.9
-clickhouse-connect>=0.6.0
-posthog>=2.0.0
-urllib3>=1.26.0
+# ChromaDB - required but large (~100-150MB)
+# Consider alternatives if still exceeding 250MB limit
+chromadb>=0.4.0
 
 # Note: Removed heavy dependencies not needed at runtime:
 # - pandas (not used in API functions)
