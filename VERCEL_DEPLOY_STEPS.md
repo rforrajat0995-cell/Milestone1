@@ -92,7 +92,7 @@ Click **"Environment Variables"** section to expand it.
 **Steps:**
 1. Click **"Add"** button
 2. **Name**: `GOOGLE_API_KEY`
-3. **Value**: Paste your actual API key (e.g., `AIzaSyC0hjZy0_F2VmbwOG9DxD8N9rtzLcwL3HM`)
+3. **Value**: Paste your actual API key (e.g., `AIzaSy...your_key_here`)
 4. **Environments**: Check all three boxes:
    - ✅ Production
    - ✅ Preview  
