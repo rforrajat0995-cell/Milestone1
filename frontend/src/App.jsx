@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect } from 'react'
 import './App.css'
 
 // Use relative path for Vercel deployment, or localhost for local development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:5000' : '/api')
+// Check if we're in production (Vercel) or development
+const isProduction = import.meta.env.PROD || !import.meta.env.DEV
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (isProduction ? '/api' : 'http://localhost:5000')
 
 function App() {
   // Store messages per chat
@@ -126,7 +128,7 @@ function App() {
       const errorMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: `Error: ${error.message}. Please make sure the backend is running on http://localhost:5000 and try again.`,
+        content: `Error: ${error.message}. ${isProduction ? 'Please check if the API is available.' : 'Please make sure the backend is running on http://localhost:5000 and try again.'}`,
         timestamp: new Date()
       }
       const updatedMessages = [...newMessages, errorMessage]
@@ -222,7 +224,7 @@ function App() {
               
               {!backendConnected && (
                 <div className="warning-box">
-                  ⚠️ Backend not connected. Please make sure the backend server is running on http://localhost:5000
+                  ⚠️ Backend not connected. {isProduction ? 'The API endpoint may not be available. Please check the deployment.' : 'Please make sure the backend server is running on http://localhost:5000'}
                 </div>
               )}
               
