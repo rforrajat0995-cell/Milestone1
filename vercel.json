@@ -3,10 +3,7 @@
   "builds": [
     {
       "src": "api/**/*.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/python"
     },
     {
       "src": "frontend/package.json",
@@ -23,10 +20,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "dest": "/frontend/dist/$1"
     }
-  ],
-  "env": {
-    "PYTHON_VERSION": "3.12"
-  }
+  ]
 }
