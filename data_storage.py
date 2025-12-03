@@ -40,6 +40,8 @@ class DataStorage:
         """
         logger.info("Starting data collection for all Parag Parikh funds")
         
+        if not SCRAPER_AVAILABLE:
+            raise ImportError("Scraper dependencies not available. Install: pip install beautifulsoup4 lxml requests")
         scraper = GrowwMFScraper()
         results = scraper.scrape_all_funds()
         
