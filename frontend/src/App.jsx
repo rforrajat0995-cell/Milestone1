@@ -2,10 +2,13 @@ import React, { useState, useRef, useEffect } from 'react'
 import './App.css'
 
 // Use relative path for Vercel deployment, or localhost for local development
-// Always use /api in production (Vercel), localhost in development
+// Detect if we're on Vercel by checking hostname, or use environment variable
+const isVercel = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('vercel.app') || 
+   window.location.hostname.includes('vercel.com'))
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5000')
-const isProduction = import.meta.env.MODE === 'production'
+  (isVercel ? '/api' : 'http://localhost:5000')
+const isProduction = isVercel || import.meta.env.MODE === 'production'
 
 function App() {
   // Store messages per chat
