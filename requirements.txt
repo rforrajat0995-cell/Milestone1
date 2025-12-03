@@ -1,13 +1,13 @@
 # Minimal requirements for Vercel serverless functions
-# Only includes runtime dependencies needed for API functions
+# Using lightweight in-memory vector store instead of ChromaDB
 
 # Core RAG dependencies
 google-generativeai>=0.3.0
 python-dotenv>=1.0.0
+numpy>=1.24.0
 
-# ChromaDB - required but large (~100-150MB)
-# Consider alternatives if still exceeding 250MB limit
-chromadb>=0.4.0
+# Note: ChromaDB removed - using SimpleVectorStore (numpy-based) instead
+# This reduces size from ~250MB to ~50-100MB
 
 # Note: Removed heavy dependencies not needed at runtime:
 # - pandas (not used in API functions)

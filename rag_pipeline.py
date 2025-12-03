@@ -10,8 +10,15 @@ from data_storage import DataStorage
 from data_chunking import FundDataChunker
 from embeddings import EmbeddingGenerator
 from embeddings_local import LocalEmbeddingGenerator
-from vector_store import VectorStore
 import config_rag
+
+# Use simple vector store for Vercel (lighter than ChromaDB)
+try:
+    from vector_store_simple import SimpleVectorStore as VectorStore
+    SIMPLE_VECTOR_STORE = True
+except ImportError:
+    from vector_store import VectorStore
+    SIMPLE_VECTOR_STORE = False
 
 try:
     import google.generativeai as genai
