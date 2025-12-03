@@ -75,6 +75,22 @@ def get_rag_pipeline():
     return rag_pipeline
 
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint - redirects to health"""
+    return jsonify({
+        "service": "Mutual Fund FAQ Assistant (RAG)",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "query": "/query (POST)",
+            "funds": "/funds (GET)",
+            "init": "/init (POST)"
+        },
+        "message": "Service is running. Use /health to check status."
+    }), 200
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint - must work even if RAG pipeline fails"""
