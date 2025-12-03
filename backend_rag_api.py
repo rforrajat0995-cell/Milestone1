@@ -194,6 +194,90 @@ def list_funds():
         }), 500
 
 
+@app.route('/init', methods=['POST'])
+def initialize_data():
+    """
+    Initialize data - call this once after deployment.
+    This allows data initialization without shell access.
+    """
+    import subprocess
+    import sys
+    import os
+    
+    logger.info("Data initialization requested")
+    
+    try:
+        # Check if data already exists
+        from data_storage import DataStorage
+        storage = DataStorage()
+        existing_data = storage.load_data()
+        
+        if existing_data and existing_data.get("funds"):
+            logger.info("Data already exists, skipping initialization")
+            return jsonify({
+                "success": True,
+                "message": "Data already initialized",
+                "funds_count": len(existing_data.get("funds", {}))
+            }), 200
+        
+        # Run scraper
+        logger.info("Running scraper...")
+        result1 = subprocess.run(
+            [sys.executable, 'main.py'], 
+            capture_output=True, 
+            text=True, 
+            timeout=600,  # 10 minute timeout
+            cwd=os.getcwd()
+        )
+        
+        if result1.returncode != 0:
+            logger.error(f"Scraper failed: {result1.stderr}")
+            return jsonify({
+                "success": False,
+                "error": "Scraper failed",
+                "details": result1.stderr[-500:] if result1.stderr else "Unknown error"
+            }), 500
+        
+        # Run index builder
+        logger.info("Building RAG index...")
+        result2 = subprocess.run(
+            [sys.executable, 'build_rag_index.py'], 
+            capture_output=True, 
+            text=True, 
+            timeout=600,  # 10 minute timeout
+            cwd=os.getcwd()
+        )
+        
+        if result2.returncode != 0:
+            logger.error(f"Index builder failed: {result2.stderr}")
+            return jsonify({
+                "success": False,
+                "error": "Index builder failed",
+                "details": result2.stderr[-500:] if result2.stderr else "Unknown error"
+            }), 500
+        
+        logger.info("Data initialization completed successfully")
+        return jsonify({
+            "success": True,
+            "message": "Data initialized successfully",
+            "scraper_output": result1.stdout[-200:] if result1.stdout else "No output",
+            "index_output": result2.stdout[-200:] if result2.stdout else "No output"
+        }), 200
+        
+    except subprocess.TimeoutExpired:
+        logger.error("Initialization timed out")
+        return jsonify({
+            "success": False,
+            "error": "Initialization timed out (takes 5-10 minutes)"
+        }), 500
+    except Exception as e:
+        logger.error(f"Initialization error: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 # This ensures the app can be imported by gunicorn
 if __name__ == '__main__':
     # Get port from environment variable (for Railway/Heroku) or default to 5000
