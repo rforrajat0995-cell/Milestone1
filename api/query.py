@@ -53,7 +53,7 @@ def initialize_data():
             return None
         
         from rag_pipeline import RAGPipeline
-        rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=True)
+        rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=False)
         _data_initialized = True
         logger.info("RAG pipeline initialized successfully")
         return rag_pipeline
