@@ -1,9 +1,8 @@
 """
-Vercel serverless function for health check endpoint
+Simple test function to verify Vercel Python functions work
 """
 from http.server import BaseHTTPRequestHandler
 import json
-import os
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -12,14 +11,10 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         
-        # Simple health check without imports first
-        rag_ready = bool(os.getenv("GOOGLE_API_KEY"))
-        
         self.wfile.write(json.dumps({
-            "status": "healthy",
-            "service": "Mutual Fund FAQ Assistant (RAG)",
-            "rag_ready": rag_ready,
-            "platform": "Vercel"
+            "status": "ok",
+            "message": "Python function is working!",
+            "path": self.path
         }).encode())
     
     def do_OPTIONS(self):
