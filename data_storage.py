@@ -74,6 +74,10 @@ class DataStorage:
                     "lock_in": fund_data.get("lock_in"),
                     "riskometer": fund_data.get("riskometer"),
                     "benchmark": fund_data.get("benchmark"),
+                    "returns_1y": fund_data.get("returns_1y"),
+                    "returns_3y": fund_data.get("returns_3y"),
+                    "returns_5y": fund_data.get("returns_5y"),
+                    "returns_since_inception": fund_data.get("returns_since_inception"),
                     "scraped_at": fund_data.get("scraped_at", datetime.now().isoformat()),
                     "validation_status": "valid"
                 }

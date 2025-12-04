@@ -174,7 +174,10 @@ class RAGPipeline:
         
         # Normalize query for better matching (handle variations like "flexicap" vs "flexi cap")
         query_lower = query.lower()
-        query_normalized = query_lower.replace("flexicap", "flexi cap").replace("flexi-cap", "flexi cap")
+        query_normalized = query_lower.replace("flexicap", "flexi cap").replace("flexi-cap", "flexi cap").replace("flexi cap", "flexi cap")
+        
+        # Also normalize "elss" variations
+        query_normalized = query_normalized.replace("elss tax saver", "elss tax saver fund").replace("elss fund", "elss tax saver fund")
         
         retrieved_fund_names = [chunk["metadata"].get("fund_name", "").lower() for chunk in retrieved_chunks]
         
@@ -215,11 +218,13 @@ IMPORTANT RULES:
 1. Only use information from the provided context
 2. Provide factual answers only - NO investment advice
 3. Always mention the exact fund name from the context in your answer
-4. If the specific fund mentioned in the question is NOT in the context, explicitly state: "The fund [fund name] is not available in the database. This fund may not exist on Groww, the URL may have changed, or the data could not be scraped successfully. Available funds include: ELSS Tax Saver, Conservative Hybrid, Liquid, Arbitrage, Dynamic Asset Allocation, and Long Term Value funds."
-5. If the information about the fund exists but the specific field is missing, say: "The [field] for [fund name] is not available in the context."
-6. Keep answers concise and factual
-7. Do not make up or infer information not explicitly stated
-8. Do NOT provide source URLs in your answer - they will be added separately
+4. For returns queries, look for fields like "1 Year Returns", "3 Year Returns", "5 Year Returns", "Returns Since Inception" in the context
+5. If the specific fund mentioned in the question is NOT in the context, explicitly state: "The fund [fund name] is not available in the database. This fund may not exist on Groww, the URL may have changed, or the data could not be scraped successfully. Available funds include: ELSS Tax Saver, Conservative Hybrid, Liquid, Arbitrage, Dynamic Asset Allocation, and Long Term Value funds."
+6. If the information about the fund exists but the specific field is missing, say: "The [field] for [fund name] is not available in the context."
+7. Keep answers concise and factual
+8. Do not make up or infer information not explicitly stated
+9. Do NOT provide source URLs in your answer - they will be added separately
+10. When answering about returns, include the exact percentage values from the context (e.g., "9.49%" or "80.90%")
 
 Context (factual information about mutual funds):
 {context}{fund_context_note}

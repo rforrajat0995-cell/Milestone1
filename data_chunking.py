@@ -85,7 +85,11 @@ class FundDataChunker:
             f"Minimum SIP: {fund_data.get('minimum_sip', 'N/A')}",
             f"Lock-in Period: {fund_data.get('lock_in', 'N/A')}",
             f"Riskometer: {fund_data.get('riskometer', 'N/A')}",
-            f"Benchmark: {fund_data.get('benchmark', 'N/A')}"
+            f"Benchmark: {fund_data.get('benchmark', 'N/A')}",
+            f"1 Year Annualized Returns (CAGR): {fund_data.get('returns_1y', 'N/A')}",
+            f"3 Year Annualized Returns (CAGR): {fund_data.get('returns_3y', 'N/A')}",
+            f"5 Year Annualized Returns (CAGR): {fund_data.get('returns_5y', 'N/A')}",
+            f"Returns Since Inception: {fund_data.get('returns_since_inception', 'N/A')}"
         ])
         
         # Create main chunk with all information

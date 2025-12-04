@@ -177,6 +177,49 @@ def validate_benchmark(value: str) -> Tuple[bool, str]:
         return False, "Benchmark value does not appear to be a valid index name"
 
 
+def validate_returns(value: str, period: str = "") -> Tuple[bool, str]:
+    """
+    Validate returns format.
+    Expected: percentage value like "12.5%" or "-5.2%" (can be negative)
+    Returns are optional, so None/empty is acceptable.
+    """
+    # Returns are optional - if None or empty, that's fine
+    if not value or value is None:
+        return True, ""
+    
+    if not isinstance(value, str):
+        return False, f"{period} returns is invalid type (expected string)"
+    
+    value = value.strip()
+    
+    # Accept "N/A" or "NA" if returns not available
+    if value.upper() in ["N/A", "NA", "NONE", ""]:
+        return True, ""
+    
+    # Check if it's a percentage format (can be negative)
+    if value.endswith('%'):
+        try:
+            num_value = float(value.rstrip('%'))
+            # Returns can be negative (losses) or very high (gains)
+            # Reasonable range: -100% (total loss) to 1000% (10x return)
+            if -100 <= num_value <= 1000:
+                return True, ""
+            else:
+                return False, f"{period} returns {num_value}% is outside reasonable range (-100% to 1000%)"
+        except ValueError:
+            return False, f"{period} returns '{value}' is not a valid number"
+    else:
+        # Try to parse as number and add %
+        try:
+            num_value = float(value)
+            if -100 <= num_value <= 1000:
+                return True, ""
+            else:
+                return False, f"{period} returns {num_value}% is outside reasonable range"
+        except ValueError:
+            return False, f"{period} returns '{value}' is not in expected format (percentage)"
+
+
 def validate_url(url: str) -> Tuple[bool, str]:
     """
     Validate URL format and structure.
@@ -222,6 +265,11 @@ def validate_all_fields(data: Dict) -> Tuple[bool, List[str]]:
         "lock_in": validate_lock_in,
         "riskometer": validate_riskometer,
         "benchmark": validate_benchmark,
+        # Returns are optional - only validate if present
+        "returns_1y": lambda v: validate_returns(v, "1Y"),
+        "returns_3y": lambda v: validate_returns(v, "3Y"),
+        "returns_5y": lambda v: validate_returns(v, "5Y"),
+        "returns_since_inception": lambda v: validate_returns(v, "Since Inception"),
     }
     
     for field, validator in field_validators.items():
@@ -230,7 +278,9 @@ def validate_all_fields(data: Dict) -> Tuple[bool, List[str]]:
             if not is_valid:
                 errors.append(f"{field}: {error}")
         else:
-            errors.append(f"Missing field: {field}")
+            # Only require core fields, returns are optional
+            if field not in ["returns_1y", "returns_3y", "returns_5y", "returns_since_inception"]:
+                errors.append(f"Missing field: {field}")
     
     return len(errors) == 0, errors
 

@@ -99,6 +99,10 @@ class GrowwMFScraper:
             "lock_in": None,
             "riskometer": None,
             "benchmark": None,
+            "returns_1y": None,
+            "returns_3y": None,
+            "returns_5y": None,
+            "returns_since_inception": None,
         }
         
         try:
@@ -307,10 +311,191 @@ class GrowwMFScraper:
                 elif 'benchmark' in mf_data and mf_data['benchmark']:
                     data["benchmark"] = mf_data['benchmark']
             
+            # Extract returns (1Y, 3Y, 5Y, Since Inception)
+            # Groww stores returns in 'simple_return' or 'return_stats' fields
+            # Format: {'return1y': value, 'return3y': value, 'return5y': value, etc.}
+            
+            # Strategy 1: Check 'simple_return' dict (most common)
+            # Note: Groww provides absolute returns, we need to calculate annualized returns (CAGR)
+            if 'simple_return' in mf_data and isinstance(mf_data['simple_return'], dict):
+                simple_ret = mf_data['simple_return']
+                
+                # Extract absolute returns and convert to annualized
+                abs_1y = simple_ret.get('return1y')
+                abs_3y = simple_ret.get('return3y')
+                abs_5y = simple_ret.get('return5y')
+                
+                # Calculate annualized returns (CAGR)
+                # 1Y return is already annualized (same as absolute for 1 year)
+                if abs_1y is not None:
+                    data["returns_1y"] = self._format_return_value(abs_1y)
+                
+                # 3Y: Calculate CAGR from absolute return
+                if abs_3y is not None:
+                    annualized_3y = self._calculate_annualized_return(abs_3y, 3.0)
+                    data["returns_3y"] = self._format_return_value(annualized_3y)
+                
+                # 5Y: Calculate CAGR from absolute return
+                if abs_5y is not None:
+                    annualized_5y = self._calculate_annualized_return(abs_5y, 5.0)
+                    data["returns_5y"] = self._format_return_value(annualized_5y)
+                
+                # Check for since inception (might be 'returnSinceInception' or 'return_since_inception')
+                # Since inception returns are typically already annualized or need special handling
+                since_inception_abs = (
+                    simple_ret.get('returnSinceInception') or 
+                    simple_ret.get('return_since_inception') or 
+                    simple_ret.get('sinceInception') or
+                    simple_ret.get('since_inception')
+                )
+                if since_inception_abs is not None:
+                    # Try to get inception date to calculate years, otherwise use as-is
+                    # For now, we'll use the absolute value (since we don't have inception date easily)
+                    data["returns_since_inception"] = self._format_return_value(since_inception_abs)
+            
+            # Strategy 2: Check 'return_stats' list (first item usually has the data)
+            if not all([data["returns_1y"], data["returns_3y"]]) and 'return_stats' in mf_data:
+                return_stats = mf_data['return_stats']
+                if isinstance(return_stats, list) and len(return_stats) > 0:
+                    # Use first item (usually contains the latest returns)
+                    stats = return_stats[0]
+                    if isinstance(stats, dict):
+                        if not data["returns_1y"]:
+                            abs_1y = stats.get('return1y')
+                            if abs_1y is not None:
+                                data["returns_1y"] = self._format_return_value(abs_1y)
+                        if not data["returns_3y"]:
+                            abs_3y = stats.get('return3y')
+                            if abs_3y is not None:
+                                annualized_3y = self._calculate_annualized_return(abs_3y, 3.0)
+                                data["returns_3y"] = self._format_return_value(annualized_3y)
+                        if not data["returns_5y"]:
+                            abs_5y = stats.get('return5y')
+                            if abs_5y is not None:
+                                annualized_5y = self._calculate_annualized_return(abs_5y, 5.0)
+                                data["returns_5y"] = self._format_return_value(annualized_5y)
+                        # Check for since inception
+                        if not data["returns_since_inception"]:
+                            data["returns_since_inception"] = self._format_return_value(
+                                stats.get('returnSinceInception') or 
+                                stats.get('return_since_inception') or
+                                stats.get('sinceInception') or
+                                stats.get('since_inception')
+                            )
+            
+            # Strategy 3: Check 'sip_return' as fallback (SIP returns, but similar structure)
+            if not all([data["returns_1y"], data["returns_3y"]]) and 'sip_return' in mf_data:
+                sip_ret = mf_data['sip_return']
+                if isinstance(sip_ret, dict):
+                    if not data["returns_1y"]:
+                        abs_1y = sip_ret.get('return1y')
+                        if abs_1y is not None:
+                            data["returns_1y"] = self._format_return_value(abs_1y)
+                    if not data["returns_3y"]:
+                        abs_3y = sip_ret.get('return3y')
+                        if abs_3y is not None:
+                            annualized_3y = self._calculate_annualized_return(abs_3y, 3.0)
+                            data["returns_3y"] = self._format_return_value(annualized_3y)
+                    if not data["returns_5y"]:
+                        abs_5y = sip_ret.get('return5y')
+                        if abs_5y is not None:
+                            annualized_5y = self._calculate_annualized_return(abs_5y, 5.0)
+                            data["returns_5y"] = self._format_return_value(annualized_5y)
+            
+            # Strategy 4: Check for alternative field names (backward compatibility)
+            if not data["returns_1y"]:
+                data["returns_1y"] = self._format_return_value(
+                    mf_data.get('returns_1y') or 
+                    mf_data.get('return_1y') or
+                    mf_data.get('1y_return') or
+                    mf_data.get('1_year_return')
+                )
+            if not data["returns_3y"]:
+                data["returns_3y"] = self._format_return_value(
+                    mf_data.get('returns_3y') or 
+                    mf_data.get('return_3y') or
+                    mf_data.get('3y_return') or
+                    mf_data.get('3_year_return')
+                )
+            if not data["returns_5y"]:
+                data["returns_5y"] = self._format_return_value(
+                    mf_data.get('returns_5y') or 
+                    mf_data.get('return_5y') or
+                    mf_data.get('5y_return') or
+                    mf_data.get('5_year_return')
+                )
+            if not data["returns_since_inception"]:
+                data["returns_since_inception"] = self._format_return_value(
+                    mf_data.get('returns_since_inception') or 
+                    mf_data.get('return_since_inception') or
+                    mf_data.get('since_inception_return') or
+                    mf_data.get('inception_return')
+                )
+            
         except Exception as e:
             logger.error(f"Error parsing JSON data: {e}")
         
         return data
+    
+    def _format_return_value(self, value) -> Optional[str]:
+        """
+        Format return value as percentage string.
+        Handles None, numbers, and strings.
+        """
+        if value is None:
+            return None
+        
+        # If already a string with %, return as is
+        if isinstance(value, str):
+            value = value.strip()
+            if value.upper() in ["N/A", "NA", "NONE", ""]:
+                return None
+            if value.endswith('%'):
+                return value
+            # Try to parse as number
+            try:
+                num_value = float(value)
+                return f"{num_value}%"
+            except ValueError:
+                return None
+        
+        # If it's a number, format as percentage
+        if isinstance(value, (int, float)):
+            return f"{value}%"
+        
+        return None
+    
+    def _calculate_annualized_return(self, absolute_return_percent: float, years: float) -> Optional[float]:
+        """
+        Calculate annualized return (CAGR) from absolute return.
+        
+        Formula: CAGR = ((1 + absolute_return)^(1/years)) - 1
+        
+        Args:
+            absolute_return_percent: Absolute return as percentage (e.g., 80.9 for 80.9%)
+            years: Number of years (e.g., 3 for 3-year return)
+        
+        Returns:
+            Annualized return as percentage, or None if invalid
+        """
+        import math
+        
+        if absolute_return_percent is None or years is None or years <= 0:
+            return None
+        
+        try:
+            # Convert percentage to decimal
+            absolute_return_decimal = absolute_return_percent / 100.0
+            
+            # Calculate CAGR: ((1 + absolute_return)^(1/years)) - 1
+            cagr_decimal = math.pow(1 + absolute_return_decimal, 1.0 / years) - 1
+            
+            # Convert back to percentage
+            cagr_percent = cagr_decimal * 100.0
+            
+            return cagr_percent
+        except (ValueError, ZeroDivisionError, OverflowError):
+            return None
     
     def _extract_from_tables(self, soup: BeautifulSoup, data: Dict) -> Dict:
         """Extract data from HTML tables"""
