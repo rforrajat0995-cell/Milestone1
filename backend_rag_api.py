@@ -382,7 +382,8 @@ def initialize_data():
 
 # For local development only
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
+    # Use port 5001 by default (5000 is often used by AirPlay on macOS)
+    port = int(os.getenv('PORT', 5001))
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
     print("="*70)

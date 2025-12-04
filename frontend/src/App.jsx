@@ -18,8 +18,8 @@ const getApiBaseUrl = () => {
     }
   }
   
-  // Default: localhost for development
-  return 'http://localhost:5000'
+  // Default: localhost for development (port 5001 to avoid AirPlay conflict)
+  return 'http://localhost:5001'
 }
 
 const API_BASE_URL = getApiBaseUrl()
