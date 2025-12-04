@@ -244,18 +244,6 @@ Answer the question using only the information from the context above. Be factua
             
             answer = response.text.strip()
             
-            # Only include source URLs if the answer indicates the information was found
-            # Check if answer says fund is not available
-            answer_lower = answer.lower()
-            fund_not_found_indicators = [
-                "not available",
-                "not in the context",
-                "not in the database",
-                "is not available",
-                "not found",
-                "does not exist"
-            ]
-            
             # Extract fund name from query - try to match with retrieved chunks
             query_fund_name = None
             query_words = set([w for w in query_normalized.split() if len(w) > 3])
@@ -270,47 +258,74 @@ Answer the question using only the information from the context above. Be factua
                     best_match_score = match_score
                     query_fund_name = fund_name
             
-            # Check if answer indicates fund was found (mentions a fund name from context)
+            # Check if answer mentions a fund name from retrieved chunks
+            answer_lower = answer.lower()
             answer_mentions_fund = any(
-                fund_name in answer_lower 
+                fund_name.lower() in answer_lower 
                 for fund_name in retrieved_fund_names 
                 if len(fund_name) > 10
             )
             
-            # Determine if fund was found
-            fund_not_found = any(indicator in answer_lower for indicator in fund_not_found_indicators)
-            fund_found = not fund_not_found and (answer_mentions_fund or query_fund_name is not None)
+            # Determine if the fund itself is not found (vs. just some data missing)
+            # Check for explicit "fund not found" patterns, not just "data not available"
+            # These patterns indicate the fund itself doesn't exist, not just missing data
+            fund_not_found_patterns = [
+                "is not available in the database",
+                "is not in the database",
+                "does not exist",
+                "may not exist",
+                "not found in the database"
+            ]
             
-            if fund_found:
+            # Only consider fund not found if answer explicitly says the fund is missing
+            # AND doesn't mention a specific fund name from our database
+            fund_explicitly_not_found = (
+                any(pattern in answer_lower for pattern in fund_not_found_patterns) 
+                and not answer_mentions_fund
+                and query_fund_name is None
+            )
+            
+            # Include source URLs if:
+            # 1. We have retrieved chunks (data was found)
+            # 2. Answer mentions a fund name OR we matched a fund from query
+            # 3. Fund is not explicitly marked as not found
+            should_include_source = (
+                len(retrieved_chunks) > 0 
+                and (answer_mentions_fund or query_fund_name is not None)
+                and not fund_explicitly_not_found
+            )
+            
+            if should_include_source:
+                # Determine which fund to use for source URL
+                target_fund_name = None
+                
                 if query_fund_name:
-                    # Only include source URLs from chunks that match the query fund name
+                    # Use the fund matched from query
+                    target_fund_name = query_fund_name
+                elif answer_mentions_fund:
+                    # Find the fund mentioned in the answer
+                    for fund_name in retrieved_fund_names:
+                        if fund_name.lower() in answer_lower:
+                            target_fund_name = fund_name
+                            break
+                
+                # Get source URLs for the target fund
+                if target_fund_name:
                     source_urls = list(set([
                         chunk["metadata"].get("source_url", "") 
                         for chunk in retrieved_chunks 
-                        if chunk["metadata"].get("fund_name", "").lower() == query_fund_name
+                        if chunk["metadata"].get("fund_name", "").lower() == target_fund_name.lower()
                         and chunk["metadata"].get("source_url")
                     ]))
                 else:
-                    # If we can't match exactly, but answer mentions a fund, use that fund's URL
-                    # Find the fund mentioned in the answer
-                    mentioned_fund = None
-                    for fund_name in retrieved_fund_names:
-                        if fund_name in answer_lower:
-                            mentioned_fund = fund_name
-                            break
-                    
-                    if mentioned_fund:
-                        source_urls = list(set([
-                            chunk["metadata"].get("source_url", "") 
-                            for chunk in retrieved_chunks 
-                            if chunk["metadata"].get("fund_name", "").lower() == mentioned_fund
-                            and chunk["metadata"].get("source_url")
-                        ]))
-                    else:
-                        # Fallback: use all source URLs if we can't determine
-                        source_urls = list(set([chunk["metadata"].get("source_url", "") for chunk in retrieved_chunks if chunk["metadata"].get("source_url")]))
+                    # Fallback: use all unique source URLs from retrieved chunks
+                    source_urls = list(set([
+                        chunk["metadata"].get("source_url", "") 
+                        for chunk in retrieved_chunks 
+                        if chunk["metadata"].get("source_url")
+                    ]))
             else:
-                # Don't include source URLs if the fund wasn't found
+                # Don't include source URLs if fund wasn't found or no chunks retrieved
                 source_urls = []
             
             return {
