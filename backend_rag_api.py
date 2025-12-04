@@ -6,6 +6,13 @@ import logging
 import os
 import sys
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, use system env vars
+
 # Setup logging first - before any imports that might fail
 logging.basicConfig(
     level=logging.INFO,

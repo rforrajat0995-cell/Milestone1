@@ -166,7 +166,7 @@ function App() {
       const errorMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: `Error: ${error.message}. ${isProduction ? 'Please check if the API is available.' : 'Please make sure the backend is running on http://localhost:5000 and try again.'}`,
+        content: `Error: ${error.message}. ${isProduction ? 'Please check if the API is available.' : 'Please make sure the backend is running on http://localhost:5001 and try again.'}`,
         timestamp: new Date()
       }
       const updatedMessages = [...newMessages, errorMessage]
