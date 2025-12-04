@@ -71,8 +71,18 @@ def get_rag_pipeline():
         
         try:
             logger.info("Attempting to initialize RAG pipeline...")
-            rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=False)
-            logger.info("RAG pipeline initialized successfully")
+            # Try with Gemini first, fallback to local if quota exceeded
+            try:
+                rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=False)
+                logger.info("RAG pipeline initialized successfully with Gemini embeddings")
+            except Exception as e:
+                error_str = str(e).lower()
+                if "quota" in error_str or "429" in error_str or "limit" in error_str:
+                    logger.warning("Gemini API quota exceeded. Falling back to local embeddings...")
+                    rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=True)
+                    logger.info("RAG pipeline initialized successfully with local embeddings")
+                else:
+                    raise
         except Exception as e:
             logger.error(f"Failed to initialize RAG pipeline: {e}", exc_info=True)
             _rag_initialization_error = str(e)
