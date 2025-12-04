@@ -62,10 +62,10 @@ def get_rag_pipeline():
             _rag_initialization_error = "No API key"
             return None
         
-            try:
-                logger.info("Attempting to initialize RAG pipeline...")
-                rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=False)
-                logger.info("RAG pipeline initialized successfully")
+        try:
+            logger.info("Attempting to initialize RAG pipeline...")
+            rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=False)
+            logger.info("RAG pipeline initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize RAG pipeline: {e}", exc_info=True)
             _rag_initialization_error = str(e)
