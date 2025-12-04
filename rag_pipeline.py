@@ -143,7 +143,17 @@ class RAGPipeline:
         logger.info(f"Processing query: {query}")
         
         # Step 1: Generate query embedding (use RETRIEVAL_QUERY task type)
-        query_embedding = self.embedder.generate_query_embedding(query)
+        try:
+            query_embedding = self.embedder.generate_query_embedding(query)
+        except Exception as e:
+            error_str = str(e).lower()
+            if "quota" in error_str or "429" in error_str or "limit" in error_str:
+                logger.warning("Gemini embedding quota exceeded during query. Switching to local embeddings...")
+                # Switch to local embeddings for this query
+                self.embedder = LocalEmbeddingGenerator()
+                query_embedding = self.embedder.generate_query_embedding(query)
+            else:
+                raise
         
         # Step 2: Retrieve relevant chunks
         retrieved_chunks = self.vector_store.search(
