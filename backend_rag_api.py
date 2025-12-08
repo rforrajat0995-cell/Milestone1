@@ -114,11 +114,32 @@ def health_check():
     try:
         pipeline = get_rag_pipeline()
         global _rag_initialization_error
+        
+        # Get mode information
+        mode_info = {
+            "embeddings": "unknown",
+            "llm": "unknown",
+            "fallback_active": False
+        }
+        
+        if pipeline:
+            # Check embedding mode
+            embedder_type = type(pipeline.embedder).__name__
+            if "Local" in embedder_type:
+                mode_info["embeddings"] = "local (sentence-transformers)"
+            else:
+                mode_info["embeddings"] = "gemini-api"
+            
+            # Check LLM mode (always Gemini for now, but fallback extraction exists)
+            mode_info["llm"] = "gemini-api"
+            mode_info["fallback_active"] = "Local" in embedder_type
+        
         return jsonify({
             "status": "healthy",
             "service": "Mutual Fund FAQ Assistant (RAG)",
             "rag_ready": pipeline is not None,
             "rag_error": _rag_initialization_error if _rag_initialization_error else None,
+            "mode": mode_info,
             "message": "Service is running. RAG pipeline may need data initialization." if not pipeline else "Service is fully operational."
         })
     except Exception as e:
@@ -218,10 +239,12 @@ def handle_query():
                 "error": "Query cannot be empty"
             }), 400
         
-        logger.info(f"Received query: {query}")
+        logger.info(f"Received query: {query} (Request ID: {id(query)})")
         
         # Process query using RAG
+        logger.info(f"Starting RAG pipeline processing for query: {query[:50]}...")
         response = pipeline.answer_query(query)
+        logger.info(f"Completed RAG pipeline processing for query: {query[:50]}...")
         
         # Format response for frontend
         formatted_response = {

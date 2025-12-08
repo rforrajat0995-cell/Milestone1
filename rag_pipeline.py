@@ -3,6 +3,7 @@ RAG Pipeline - Main component for Retrieval Augmented Generation
 """
 
 import os
+import re
 from typing import Dict, List, Optional
 import logging
 
@@ -140,18 +141,31 @@ class RAGPipeline:
         Returns:
             Dictionary with answer, source URLs, and metadata
         """
+        import time
+        query_start_time = time.time()
+        api_call_count = 0
+        
         logger.info(f"Processing query: {query}")
+        logger.info("="*70)
+        logger.info("STARTING QUERY PROCESSING - Tracking API calls")
+        logger.info("="*70)
         
         # Step 1: Generate query embedding (use RETRIEVAL_QUERY task type)
+        logger.info("Step 1: Generating query embedding (Expected: 1 Gemini API call)")
         try:
+            embedding_start = time.time()
             query_embedding = self.embedder.generate_query_embedding(query)
+            api_call_count += 1
+            embedding_time = time.time() - embedding_start
+            logger.info(f"✓ Step 1: Query embedding generated successfully (API call #{api_call_count}, took {embedding_time:.2f}s)")
         except Exception as e:
             error_str = str(e).lower()
             if "quota" in error_str or "429" in error_str or "limit" in error_str:
-                logger.warning("Gemini embedding quota exceeded during query. Switching to local embeddings...")
+                logger.warning(f"Gemini embedding quota exceeded (after {api_call_count} API calls). Switching to local embeddings...")
                 # Switch to local embeddings for this query
                 self.embedder = LocalEmbeddingGenerator()
                 query_embedding = self.embedder.generate_query_embedding(query)
+                logger.info("✓ Switched to local embeddings (no API call)")
             else:
                 raise
         
@@ -212,6 +226,9 @@ class RAGPipeline:
         if query_fund_mentioned:
             fund_context_note = f"\n\nNOTE: The fund '{query_fund_mentioned}' exists in the database but has no valid data (scraping failed or data unavailable)."
         
+        # Initialize source_urls to avoid UnboundLocalError in exception handler
+        source_urls = []
+        
         prompt = f"""You are a helpful assistant that answers questions about mutual funds based on provided factual information.
 
 IMPORTANT RULES:
@@ -234,6 +251,9 @@ Question: {query}
 Answer the question using only the information from the context above. Be factual and concise. Do not provide investment advice. If the fund is not in the context, clearly state that."""
 
         try:
+            logger.info(f"Step 4: Generating answer with Gemini LLM (Expected: 1 Gemini API call, Current total: {api_call_count})")
+            logger.info(f"[LLM API] Calling generate_content with prompt length: {len(prompt)} chars")
+            llm_start = time.time()
             response = self.llm_model.generate_content(
                 prompt,
                 generation_config=genai.types.GenerationConfig(
@@ -241,8 +261,15 @@ Answer the question using only the information from the context above. Be factua
                     max_output_tokens=config_rag.MAX_TOKENS
                 )
             )
+            api_call_count += 1
+            llm_time = time.time() - llm_start
             
             answer = response.text.strip()
+            total_time = time.time() - query_start_time
+            logger.info(f"[LLM API] ✓ Success (API call #{api_call_count}, took {llm_time:.2f}s)")
+            logger.info("="*70)
+            logger.info(f"QUERY COMPLETE - Total API calls: {api_call_count} (Expected: 2), Total time: {total_time:.2f}s")
+            logger.info("="*70)
             
             # Extract fund name from query - try to match with retrieved chunks
             query_fund_name = None
@@ -328,22 +355,190 @@ Answer the question using only the information from the context above. Be factua
                 # Don't include source URLs if fund wasn't found or no chunks retrieved
                 source_urls = []
             
+            logger.info("Answer generated successfully using Gemini LLM")
             return {
                 "success": True,
                 "answer": answer,
                 "source_urls": source_urls,
                 "query": query,
-                "retrieved_chunks": len(retrieved_chunks)
+                "retrieved_chunks": len(retrieved_chunks),
+                "mode": "gemini_llm"
             }
             
         except Exception as e:
-            logger.error(f"Error generating answer: {e}")
-            return {
-                "success": False,
-                "answer": f"Error generating answer: {str(e)}",
-                "source_urls": source_urls,
-                "query": query
-            }
+            error_str = str(e).lower()
+            is_quota_error = "quota" in error_str or "429" in error_str or "limit" in error_str
+            
+            if is_quota_error and retrieved_chunks:
+                logger.warning("Gemini API quota exceeded. Using fallback extraction from retrieved chunks.")
+                # Fallback: Extract information directly from chunks
+                answer = self._extract_answer_from_chunks(query, retrieved_chunks, query_normalized, retrieved_fund_names)
+                
+                # Get source URLs from retrieved chunks
+                source_urls = list(set([
+                    chunk["metadata"].get("source_url", "") 
+                    for chunk in retrieved_chunks 
+                    if chunk["metadata"].get("source_url")
+                ]))
+                
+                logger.info("Using fallback extraction method (Gemini API quota exceeded)")
+                return {
+                    "success": True,
+                    "answer": answer,
+                    "source_urls": source_urls,
+                    "query": query,
+                    "retrieved_chunks": len(retrieved_chunks),
+                    "note": "Answer extracted directly from data (LLM quota exceeded)",
+                    "mode": "fallback_extraction"
+                }
+            else:
+                logger.error(f"Error generating answer: {e}")
+                return {
+                    "success": False,
+                    "answer": f"Error generating answer: {str(e)}",
+                    "source_urls": source_urls,
+                    "query": query
+                }
+    
+    def _extract_answer_from_chunks(self, query: str, chunks: List[Dict], query_normalized: str, fund_names: List[str]) -> str:
+        """
+        Fallback method to extract answers directly from chunks when LLM is unavailable.
+        This handles common query patterns like expense ratio, exit load, etc.
+        """
+        query_lower = query.lower()
+        context_text = "\n\n".join([chunk["text"] for chunk in chunks])
+        
+        # Try to identify the fund name from query
+        fund_name = None
+        for name in fund_names:
+            name_words = set(name.split())
+            query_words = set(query_lower.split())
+            if len(name_words.intersection(query_words)) >= 2:
+                fund_name = name
+                break
+        
+        # Extract common fields
+        answer_parts = []
+        
+        # Check for specific field queries
+        if "exit load" in query_lower or "exitload" in query_lower:
+            # Look for exit load in context
+            exit_load_patterns = [
+                r'exit load[:\s]+([^\n]+)',
+                r'exitload[:\s]+([^\n]+)',
+                r'Exit Load[:\s]+([^\n]+)',
+            ]
+            for pattern in exit_load_patterns:
+                match = re.search(pattern, context_text, re.IGNORECASE)
+                if match:
+                    exit_load = match.group(1).strip()
+                    if fund_name:
+                        answer_parts.append(f"The exit load for {fund_name} is {exit_load}.")
+                    else:
+                        answer_parts.append(f"Exit load: {exit_load}")
+                    break
+        
+        if "expense ratio" in query_lower or "expenseratio" in query_lower:
+            expense_patterns = [
+                r'expense ratio[:\s]+([^\n]+)',
+                r'Expense Ratio[:\s]+([^\n]+)',
+                r'Total Expense Ratio[:\s]+([^\n]+)',
+            ]
+            for pattern in expense_patterns:
+                match = re.search(pattern, context_text, re.IGNORECASE)
+                if match:
+                    expense = match.group(1).strip()
+                    if fund_name:
+                        answer_parts.append(f"The expense ratio for {fund_name} is {expense}.")
+                    else:
+                        answer_parts.append(f"Expense ratio: {expense}")
+                    break
+        
+        if "minimum sip" in query_lower or "min sip" in query_lower or "minimum investment" in query_lower:
+            sip_patterns = [
+                r'minimum sip[:\s]+([^\n]+)',
+                r'Minimum SIP[:\s]+([^\n]+)',
+                r'minimum investment[:\s]+([^\n]+)',
+            ]
+            for pattern in sip_patterns:
+                match = re.search(pattern, context_text, re.IGNORECASE)
+                if match:
+                    sip = match.group(1).strip()
+                    if fund_name:
+                        answer_parts.append(f"The minimum SIP for {fund_name} is {sip}.")
+                    else:
+                        answer_parts.append(f"Minimum SIP: {sip}")
+                    break
+        
+        if "lock" in query_lower and "in" in query_lower:
+            lock_patterns = [
+                r'lock[-\s]?in[:\s]+([^\n]+)',
+                r'Lock[-\s]?in[:\s]+([^\n]+)',
+            ]
+            for pattern in lock_patterns:
+                match = re.search(pattern, context_text, re.IGNORECASE)
+                if match:
+                    lock_in = match.group(1).strip()
+                    if fund_name:
+                        answer_parts.append(f"The lock-in period for {fund_name} is {lock_in}.")
+                    else:
+                        answer_parts.append(f"Lock-in period: {lock_in}")
+                    break
+        
+        if "riskometer" in query_lower or "risk" in query_lower:
+            risk_patterns = [
+                r'riskometer[:\s]+([^\n]+)',
+                r'Riskometer[:\s]+([^\n]+)',
+                r'risk level[:\s]+([^\n]+)',
+            ]
+            for pattern in risk_patterns:
+                match = re.search(pattern, context_text, re.IGNORECASE)
+                if match:
+                    risk = match.group(1).strip()
+                    if fund_name:
+                        answer_parts.append(f"The riskometer for {fund_name} is {risk}.")
+                    else:
+                        answer_parts.append(f"Riskometer: {risk}")
+                    break
+        
+        if "benchmark" in query_lower:
+            benchmark_patterns = [
+                r'benchmark[:\s]+([^\n]+)',
+                r'Benchmark[:\s]+([^\n]+)',
+            ]
+            for pattern in benchmark_patterns:
+                match = re.search(pattern, context_text, re.IGNORECASE)
+                if match:
+                    benchmark = match.group(1).strip()
+                    if fund_name:
+                        answer_parts.append(f"The benchmark for {fund_name} is {benchmark}.")
+                    else:
+                        answer_parts.append(f"Benchmark: {benchmark}")
+                    break
+        
+        # If we found specific information, return it
+        if answer_parts:
+            answer = " ".join(answer_parts)
+            if fund_name:
+                # Try to get more context about the fund
+                fund_chunks = [c for c in chunks if c["metadata"].get("fund_name", "").lower() == fund_name.lower()]
+                if fund_chunks:
+                    # Add a note that this is extracted data
+                    answer += " (Note: This information was extracted directly from the data due to API quota limits.)"
+            return answer
+        
+        # Fallback: Return relevant context snippets
+        if chunks:
+            # Get the most relevant chunk (first one is usually most relevant)
+            top_chunk = chunks[0]["text"]
+            # Extract first few sentences
+            sentences = top_chunk.split('.')[:3]
+            answer = '. '.join(sentences).strip()
+            if answer:
+                answer += ". (Note: This is extracted information from the database. For a more detailed answer, please wait for the API quota to reset.)"
+                return answer
+        
+        return "I found relevant information in the database, but I'm unable to generate a detailed answer due to API quota limits. Please try again later or check the source URLs for direct information."
     
     def format_answer(self, response: Dict) -> str:
         """Format the response with source URLs"""

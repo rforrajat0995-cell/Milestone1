@@ -35,11 +35,17 @@ function App() {
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [backendConnected, setBackendConnected] = useState(false)
+  const [backendMode, setBackendMode] = useState(null)  // Track backend mode (gemini vs fallback)
   const messagesEndRef = useRef(null)
+  const requestInProgressRef = useRef(false)  // Prevent duplicate requests
+  const healthCheckDoneRef = useRef(false)  // Prevent duplicate health checks
 
-  // Check backend connection on mount
+  // Check backend connection on mount (only once, even with StrictMode)
   useEffect(() => {
-    checkBackendConnection()
+    if (!healthCheckDoneRef.current) {
+      healthCheckDoneRef.current = true
+      checkBackendConnection()
+    }
   }, [])
 
   // Load messages when active chat changes
@@ -73,6 +79,12 @@ function App() {
       const data = await response.json()
       console.log('Health check data:', data)
       setBackendConnected(data.status === 'healthy')
+      
+      // Store mode information
+      if (data.mode) {
+        setBackendMode(data.mode)
+        console.log('Backend mode:', data.mode)
+      }
     } catch (error) {
       console.error('Backend connection check failed:', error)
       console.error('Error details:', {
@@ -93,7 +105,11 @@ function App() {
   }, [messages])
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return
+    // Prevent duplicate requests
+    if (!inputValue.trim() || isLoading || requestInProgressRef.current) {
+      console.log('Request blocked - already in progress or invalid input')
+      return
+    }
 
     const userMessage = {
       id: Date.now(),
@@ -105,12 +121,14 @@ function App() {
     const queryText = inputValue
     setInputValue('')
     setIsLoading(true)
+    requestInProgressRef.current = true  // Mark request as in progress
 
     // Add user message immediately
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
 
     try {
+      console.log('Sending query to:', `${API_BASE_URL}/query`)
       const response = await fetch(`${API_BASE_URL}/query`, {
         method: 'POST',
         headers: {
@@ -119,14 +137,27 @@ function App() {
         body: JSON.stringify({ query: queryText }),
       })
 
+      console.log('Response status:', response.status, response.statusText)
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch (e) {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` }
+        }
+        console.error('HTTP error:', errorData)
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
+      console.log('Response data:', data)
 
       if (!data.success) {
+        // Show the actual answer even if success is false (might contain useful error info)
+        if (data.answer && data.answer.includes('Error generating answer')) {
+          throw new Error(data.answer)
+        }
         throw new Error(data.error || 'Query failed')
       }
 
@@ -162,11 +193,30 @@ function App() {
         setActiveChatId(newChat.id)
       }
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        API_BASE_URL: API_BASE_URL
+      })
+      
+      // Check if it's a network error
+      const isNetworkError = error.message.includes('Failed to fetch') || 
+                            error.message.includes('NetworkError') ||
+                            error.message.includes('Network request failed') ||
+                            error.name === 'TypeError'
+      
+      let errorContent
+      if (isNetworkError) {
+        errorContent = `Network Error: Cannot connect to backend at ${API_BASE_URL}. Please make sure the backend is running on http://localhost:5001 and try again.`
+      } else {
+        errorContent = `Error: ${error.message}`
+      }
+      
       const errorMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: `Error: ${error.message}. ${isProduction ? 'Please check if the API is available.' : 'Please make sure the backend is running on http://localhost:5001 and try again.'}`,
+        content: errorContent,
         timestamp: new Date()
       }
       const updatedMessages = [...newMessages, errorMessage]
@@ -181,6 +231,7 @@ function App() {
       }
     } finally {
       setIsLoading(false)
+      requestInProgressRef.current = false  // Reset request flag
     }
   }
 
@@ -216,6 +267,20 @@ function App() {
           <div className="status-dot"></div>
           <span>{backendConnected ? 'Backend Connected' : 'Backend Disconnected'}</span>
         </div>
+        
+        {/* Backend Mode Indicator */}
+        {backendConnected && backendMode && (
+          <div className="mode-status">
+            <div className="mode-label">Mode:</div>
+            <div className={`mode-badge ${backendMode.fallback_active ? 'fallback' : 'gemini'}`}>
+              {backendMode.fallback_active ? '🔄 Fallback (Local)' : '✨ Gemini API'}
+            </div>
+            <div className="mode-details">
+              Embeddings: {backendMode.embeddings === 'local (sentence-transformers)' ? 'Local' : 'Gemini'} | 
+              LLM: {backendMode.llm === 'gemini-api' ? 'Gemini' : 'Fallback'}
+            </div>
+          </div>
+        )}
 
         {/* Chats Section */}
         <div className="chats-section">

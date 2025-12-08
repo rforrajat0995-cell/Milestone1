@@ -99,14 +99,20 @@ class EmbeddingGenerator:
         Returns:
             List of floats representing the embedding vector
         """
+        import time
+        start_time = time.time()
+        logger.info(f"[EMBEDDING API] Calling genai.embed_content for query: '{query[:50]}...'")
         try:
             result = genai.embed_content(
                 model=self.model,
                 content=query,
                 task_type="RETRIEVAL_QUERY"
             )
+            elapsed = time.time() - start_time
+            logger.info(f"[EMBEDDING API] ✓ Success (took {elapsed:.2f}s)")
             return result['embedding']
         except Exception as e:
-            logger.error(f"Error generating query embedding: {e}")
+            elapsed = time.time() - start_time
+            logger.error(f"[EMBEDDING API] ✗ Error after {elapsed:.2f}s: {e}")
             raise
 

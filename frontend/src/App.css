@@ -99,6 +99,50 @@
   }
 }
 
+/* Mode Status Indicator */
+.mode-status {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+}
+
+.mode-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.mode-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.mode-badge.gemini {
+  background-color: rgba(0, 212, 170, 0.2);
+  color: #00d4aa;
+  border: 1px solid rgba(0, 212, 170, 0.3);
+}
+
+.mode-badge.fallback {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.mode-details {
+  font-size: 10px;
+  color: #666;
+  margin-top: 4px;
+}
+
 .warning-box {
   background-color: rgba(255, 193, 7, 0.1);
   border: 1px solid rgba(255, 193, 7, 0.3);
