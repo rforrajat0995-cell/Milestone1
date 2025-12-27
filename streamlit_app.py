@@ -299,7 +299,12 @@ with st.sidebar:
         st.rerun()
 
 # Chat interface
-st.header("💬 Chat")
+st.markdown("""
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+    <div style="background-color: #00d4aa; color: white; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;">RAG Assistant</div>
+    <h1 style="margin: 0; font-size: 1.8rem;">💬 Chat</h1>
+</div>
+""", unsafe_allow_html=True)
 
 # Display chat history
 for message in st.session_state.messages:
