@@ -153,6 +153,22 @@
   text-align: center;
 }
 
+.info-box {
+  background-color: rgba(0, 212, 170, 0.1);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+  color: #00d4aa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  text-align: left;
+  line-height: 1.6;
+}
+
+.info-box strong {
+  color: #00d4aa;
+  font-weight: 600;
+}
+
 .chats-section {
   margin-bottom: 24px;
 }
@@ -385,6 +401,18 @@
 
 .source-links a:hover {
   text-decoration: underline;
+}
+
+.source-note {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.source-note small {
+  color: #888;
+  font-size: 11px;
+  font-style: italic;
 }
 
 .typing-indicator {

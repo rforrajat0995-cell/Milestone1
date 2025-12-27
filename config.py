@@ -8,7 +8,7 @@ BASE_URL = "https://groww.in/mutual-funds/"
 # Parag Parikh AMC funds mapping: fund_name -> URL slug
 # URLs verified and updated as per user requirements
 PARAG_PARIKH_FUNDS = {
-    "Parag Parikh Flexi Cap Fund Direct Growth": "parag-parikh-flexi-cap-fund-direct-growth",
+    "Parag Parikh Flexi Cap Fund Direct Growth": "parag-parikh-long-term-value-fund-direct-growth",
     "Parag Parikh ELSS Tax Saver Fund Direct Growth": "parag-parikh-elss-tax-saver-fund-direct-growth",
     "Parag Parikh Conservative Hybrid Fund Direct Growth": "parag-parikh-conservative-hybrid-fund-direct-growth",
     "Parag Parikh Liquid Fund Direct Growth": "parag-parikh-liquid-fund-direct-growth",

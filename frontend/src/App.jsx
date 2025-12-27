@@ -323,11 +323,18 @@ function App() {
           {messages.length === 0 ? (
             <div className="welcome-screen">
               <h1>How can I help you today?</h1>
+              
+              {/* Important Notice */}
+              <div className="info-box">
+                <strong>📌 Important:</strong> This assistant is specifically designed for <strong>Parag Parikh Mutual Funds only</strong>. 
+                It does not support queries about funds from other Asset Management Companies (AMCs).
+              </div>
+              
               <p>Ask me anything about Parag Parikh mutual funds. I can help you find information about expense ratios, exit loads, minimum SIP amounts, lock-in periods, riskometers, and benchmarks.</p>
               
               {!backendConnected && (
                 <div className="warning-box">
-                  ⚠️ Backend not connected. {isProduction ? 'The API endpoint may not be available. Please check the deployment.' : 'Please make sure the backend server is running on http://localhost:5000'}
+                  ⚠️ Backend not connected. {isProduction ? 'The API endpoint may not be available. Please check the deployment.' : 'Please make sure the backend server is running on http://localhost:5001'}
                 </div>
               )}
               
@@ -335,7 +342,7 @@ function App() {
                 <div className="feature-card">
                   <div className="feature-icon">📊</div>
                   <h3>Fund Information</h3>
-                  <p>Get detailed information about any Parag Parikh mutual fund scheme.</p>
+                  <p>Get detailed information about Parag Parikh mutual fund schemes only.</p>
                 </div>
                 <div className="feature-card">
                   <div className="feature-icon">🔍</div>
@@ -359,8 +366,17 @@ function App() {
                       <div className="source-links">
                         <strong>Source:</strong>{' '}
                         <a href={message.sourceUrls[0]} target="_blank" rel="noopener noreferrer">
-                          {message.sourceUrls[0]}
+                          {message.sourceUrls[0].includes('?q=') ? 'Search on Groww' : message.sourceUrls[0]}
                         </a>
+                        {message.sourceUrls[0].includes('?q=') ? (
+                          <div className="source-note">
+                            <small>Note: Direct fund URL not available. Click to search for this fund on Groww.</small>
+                          </div>
+                        ) : (
+                          <div className="source-note">
+                            <small>Note: Source URLs are from when data was scraped. If this link doesn't work, please search for the fund on <a href="https://groww.in/mutual-funds" target="_blank" rel="noopener noreferrer">Groww</a>.</small>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -407,7 +423,8 @@ function App() {
         </div>
 
         <div className="footer-disclaimer">
-          This assistant provides factual information only. It does not provide investment advice.
+          This assistant provides factual information only for Parag Parikh Mutual Funds. 
+          It does not support other AMCs and does not provide investment advice.
         </div>
       </div>
     </div>

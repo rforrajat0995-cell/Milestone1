@@ -60,29 +60,20 @@ def get_rag_pipeline():
         return None
     
     if rag_pipeline is None and _rag_initialization_error is None:
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = os.getenv("GROQ_API_KEY")
         if config_rag:
-            api_key = api_key or getattr(config_rag, 'GOOGLE_API_KEY', None)
+            api_key = api_key or getattr(config_rag, 'GROQ_API_KEY', None)
         
         if not api_key:
-            logger.warning("No Google API key found. RAG pipeline may not work correctly.")
+            logger.warning("No Groq API key found. RAG pipeline may not work correctly.")
             _rag_initialization_error = "No API key"
             return None
         
         try:
-            logger.info("Attempting to initialize RAG pipeline...")
-            # Try with Gemini first, fallback to local if quota exceeded
-            try:
-                rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=False)
-                logger.info("RAG pipeline initialized successfully with Gemini embeddings")
-            except Exception as e:
-                error_str = str(e).lower()
-                if "quota" in error_str or "429" in error_str or "limit" in error_str:
-                    logger.warning("Gemini API quota exceeded. Falling back to local embeddings...")
-                    rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=True)
-                    logger.info("RAG pipeline initialized successfully with local embeddings")
-                else:
-                    raise
+            logger.info("Attempting to initialize RAG pipeline with Groq...")
+            # Always use local embeddings (Groq doesn't provide embeddings)
+            rag_pipeline = RAGPipeline(api_key=api_key, use_local_embeddings=True)
+            logger.info("RAG pipeline initialized successfully with Groq LLM and local embeddings")
         except Exception as e:
             logger.error(f"Failed to initialize RAG pipeline: {e}", exc_info=True)
             _rag_initialization_error = str(e)
@@ -123,16 +114,19 @@ def health_check():
         }
         
         if pipeline:
-            # Check embedding mode
+            # Check embedding mode (always local with Groq)
             embedder_type = type(pipeline.embedder).__name__
             if "Local" in embedder_type:
                 mode_info["embeddings"] = "local (sentence-transformers)"
             else:
                 mode_info["embeddings"] = "gemini-api"
             
-            # Check LLM mode (always Gemini for now, but fallback extraction exists)
-            mode_info["llm"] = "gemini-api"
-            mode_info["fallback_active"] = "Local" in embedder_type
+            # Check LLM mode (Groq)
+            if hasattr(pipeline, 'groq_client'):
+                mode_info["llm"] = "groq-api"
+            else:
+                mode_info["llm"] = "gemini-api"
+            mode_info["fallback_active"] = False  # Groq doesn't need fallback
         
         return jsonify({
             "status": "healthy",

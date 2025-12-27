@@ -22,6 +22,13 @@ except ImportError:
     SIMPLE_VECTOR_STORE = False
 
 try:
+    from groq import Groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+
+# Keep Gemini import for backward compatibility (if needed)
+try:
     import google.generativeai as genai
     GEMINI_AVAILABLE = True
 except ImportError:
@@ -41,37 +48,23 @@ class RAGPipeline:
             chunk_overlap=config_rag.CHUNK_OVERLAP
         )
         
-        # Initialize embeddings
-        if use_local_embeddings:
-            logger.info("Using local embeddings (sentence-transformers)")
-            self.embedder = LocalEmbeddingGenerator()
-        else:
-            # Try Google Gemini embeddings
-            api_key = api_key or config_rag.GOOGLE_API_KEY
-            if not api_key:
-                logger.warning("No API key found. Falling back to local embeddings.")
-                self.embedder = LocalEmbeddingGenerator()
-                use_local_embeddings = True
-            else:
-                try:
-                    self.embedder = EmbeddingGenerator(api_key=api_key, model=config_rag.GEMINI_EMBEDDING_MODEL)
-                    logger.info("Using Google Gemini embeddings")
-                except Exception as e:
-                    logger.warning(f"Failed to initialize Gemini embeddings: {e}. Falling back to local embeddings.")
-                    self.embedder = LocalEmbeddingGenerator()
-                    use_local_embeddings = True
+        # Initialize embeddings - Always use local embeddings (Groq doesn't provide embeddings)
+        logger.info("Using local embeddings (sentence-transformers) - Groq doesn't provide embeddings")
+        self.embedder = LocalEmbeddingGenerator()
         
         self.vector_store = VectorStore(db_path=config_rag.VECTOR_DB_PATH)
         
-        # Initialize Gemini LLM (still needed for answer generation)
-        api_key = api_key or config_rag.GOOGLE_API_KEY
-        if not api_key:
-            raise ValueError("Google API key required for LLM. Set GOOGLE_API_KEY environment variable.")
+        # Initialize Groq LLM for answer generation
+        groq_api_key = api_key or config_rag.GROQ_API_KEY
+        if not groq_api_key:
+            raise ValueError("Groq API key required for LLM. Set GROQ_API_KEY environment variable.")
         
-        if not GEMINI_AVAILABLE:
-            raise ImportError("Google Generative AI library required. Install with: pip install google-generativeai")
-        genai.configure(api_key=api_key)
-        self.llm_model = genai.GenerativeModel(config_rag.GEMINI_LLM_MODEL)
+        if not GROQ_AVAILABLE:
+            raise ImportError("Groq library required. Install with: pip install groq")
+        
+        self.groq_client = Groq(api_key=groq_api_key)
+        self.llm_model_name = config_rag.GROQ_LLM_MODEL
+        logger.info(f"Initialized Groq LLM with model: {self.llm_model_name}")
     
     def build_index(self):
         """
@@ -143,31 +136,22 @@ class RAGPipeline:
         """
         import time
         query_start_time = time.time()
-        api_call_count = 0
         
         logger.info(f"Processing query: {query}")
         logger.info("="*70)
-        logger.info("STARTING QUERY PROCESSING - Tracking API calls")
+        logger.info("STARTING QUERY PROCESSING - Using Groq LLM + Local Embeddings")
         logger.info("="*70)
         
-        # Step 1: Generate query embedding (use RETRIEVAL_QUERY task type)
-        logger.info("Step 1: Generating query embedding (Expected: 1 Gemini API call)")
+        # Step 1: Generate query embedding (using local embeddings - no API call)
+        logger.info("Step 1: Generating query embedding (Using local embeddings - no API call)")
         try:
             embedding_start = time.time()
             query_embedding = self.embedder.generate_query_embedding(query)
-            api_call_count += 1
             embedding_time = time.time() - embedding_start
-            logger.info(f"✓ Step 1: Query embedding generated successfully (API call #{api_call_count}, took {embedding_time:.2f}s)")
+            logger.info(f"✓ Step 1: Query embedding generated successfully (local, no API call, took {embedding_time:.2f}s)")
         except Exception as e:
-            error_str = str(e).lower()
-            if "quota" in error_str or "429" in error_str or "limit" in error_str:
-                logger.warning(f"Gemini embedding quota exceeded (after {api_call_count} API calls). Switching to local embeddings...")
-                # Switch to local embeddings for this query
-                self.embedder = LocalEmbeddingGenerator()
-                query_embedding = self.embedder.generate_query_embedding(query)
-                logger.info("✓ Switched to local embeddings (no API call)")
-            else:
-                raise
+            logger.error(f"Error generating query embedding: {e}")
+            raise
         
         # Step 2: Retrieve relevant chunks
         retrieved_chunks = self.vector_store.search(
@@ -251,24 +235,27 @@ Question: {query}
 Answer the question using only the information from the context above. Be factual and concise. Do not provide investment advice. If the fund is not in the context, clearly state that."""
 
         try:
-            logger.info(f"Step 4: Generating answer with Gemini LLM (Expected: 1 Gemini API call, Current total: {api_call_count})")
-            logger.info(f"[LLM API] Calling generate_content with prompt length: {len(prompt)} chars")
+            logger.info(f"Step 4: Generating answer with Groq LLM (Expected: 1 Groq API call)")
+            logger.info(f"[GROQ API] Calling chat.completions.create with prompt length: {len(prompt)} chars")
             llm_start = time.time()
-            response = self.llm_model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=config_rag.TEMPERATURE,
-                    max_output_tokens=config_rag.MAX_TOKENS
-                )
+            
+            # Use Groq API
+            response = self.groq_client.chat.completions.create(
+                model=self.llm_model_name,
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that answers questions about mutual funds based on provided factual information. Provide factual answers only - NO investment advice."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=config_rag.TEMPERATURE,
+                max_tokens=config_rag.MAX_TOKENS
             )
-            api_call_count += 1
             llm_time = time.time() - llm_start
             
-            answer = response.text.strip()
+            answer = response.choices[0].message.content.strip()
             total_time = time.time() - query_start_time
-            logger.info(f"[LLM API] ✓ Success (API call #{api_call_count}, took {llm_time:.2f}s)")
+            logger.info(f"[GROQ API] ✓ Success (API call #1, took {llm_time:.2f}s)")
             logger.info("="*70)
-            logger.info(f"QUERY COMPLETE - Total API calls: {api_call_count} (Expected: 2), Total time: {total_time:.2f}s")
+            logger.info(f"QUERY COMPLETE - Total API calls: 1 (Groq LLM only, embeddings are local), Total time: {total_time:.2f}s")
             logger.info("="*70)
             
             # Extract fund name from query - try to match with retrieved chunks
@@ -351,18 +338,29 @@ Answer the question using only the information from the context above. Be factua
                         for chunk in retrieved_chunks 
                         if chunk["metadata"].get("source_url")
                     ]))
+                
+                # Filter out empty or invalid URLs
+                source_urls = [url for url in source_urls if url and url.strip() and url.startswith("http")]
+                
+                # If no valid URLs found, create a search link to Groww
+                if not source_urls and target_fund_name:
+                    # Create a search URL for the fund on Groww
+                    fund_search_name = target_fund_name.replace(" ", "+")
+                    search_url = f"https://groww.in/mutual-funds?q={fund_search_name}"
+                    source_urls = [search_url]
+                    logger.info(f"No direct URL found, using search URL: {search_url}")
             else:
                 # Don't include source URLs if fund wasn't found or no chunks retrieved
                 source_urls = []
             
-            logger.info("Answer generated successfully using Gemini LLM")
+            logger.info("Answer generated successfully using Groq LLM")
             return {
                 "success": True,
                 "answer": answer,
                 "source_urls": source_urls,
                 "query": query,
                 "retrieved_chunks": len(retrieved_chunks),
-                "mode": "gemini_llm"
+                "mode": "groq_llm"
             }
             
         except Exception as e:
@@ -381,14 +379,17 @@ Answer the question using only the information from the context above. Be factua
                     if chunk["metadata"].get("source_url")
                 ]))
                 
-                logger.info("Using fallback extraction method (Gemini API quota exceeded)")
+                # Filter out empty or invalid URLs
+                source_urls = [url for url in source_urls if url and url.strip() and url.startswith("http")]
+                
+                logger.info("Using fallback extraction method (Groq API quota/error occurred)")
                 return {
                     "success": True,
                     "answer": answer,
                     "source_urls": source_urls,
                     "query": query,
                     "retrieved_chunks": len(retrieved_chunks),
-                    "note": "Answer extracted directly from data (LLM quota exceeded)",
+                    "note": "Answer extracted directly from data (LLM quota/error occurred)",
                     "mode": "fallback_extraction"
                 }
             else:
