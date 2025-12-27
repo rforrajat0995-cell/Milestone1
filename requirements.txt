@@ -7,6 +7,9 @@ python-dotenv
 numpy
 sentence-transformers  # For local embeddings (required with Groq)
 
+# Streamlit (for Streamlit Cloud deployment)
+streamlit>=1.28.0
+
 # Note: ChromaDB removed - using SimpleVectorStore (numpy-based) instead
 # This reduces size from ~250MB to ~50-100MB
 
