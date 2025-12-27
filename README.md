@@ -140,12 +140,16 @@ Open your browser and navigate to: **http://localhost:3000**
 ```
 Milestone1/
 ├── backend_rag_api.py      # Flask REST API server
+├── streamlit_app.py        # Streamlit web app
 ├── scraper.py              # Web scraper for Groww pages
+├── main.py                 # Main scraper script
+├── build_rag_index.py      # RAG index builder
 ├── rag_pipeline.py         # RAG system orchestration
 ├── data_chunking.py        # Text chunking for RAG
-├── embeddings.py           # Google Gemini embeddings
+├── embeddings.py           # Google Gemini embeddings (legacy)
 ├── embeddings_local.py     # Local embedding fallback
 ├── vector_store.py         # ChromaDB integration
+├── vector_store_simple.py  # Simple vector store (for deployment)
 ├── data_storage.py         # JSON data storage
 ├── config.py               # Scraper configuration
 ├── config_rag.py           # RAG configuration
@@ -153,18 +157,25 @@ Milestone1/
 ├── requirements.txt        # Python dependencies
 ├── .env.example            # Environment variables template
 ├── .gitignore              # Git ignore rules
+├── .streamlit/              # Streamlit configuration
+│   └── config.toml
 ├── data/
 │   ├── storage/
 │   │   └── funds_database.json  # Scraped fund data
-│   └── vector_db/          # ChromaDB vector database
-└── frontend/
-    ├── src/
-    │   ├── App.jsx         # Main React component
-    │   ├── App.css         # Styles
-    │   └── main.jsx        # Entry point
-    ├── package.json        # Node dependencies
-    ├── vite.config.js      # Vite configuration
-    └── .env.example        # Frontend env template
+│   └── vector_db/          # Vector database
+│       └── mutual_funds.json    # Pre-built vector index
+├── frontend/               # React frontend
+│   ├── src/
+│   │   ├── App.jsx         # Main React component
+│   │   ├── App.css         # Styles
+│   │   └── main.jsx        # Entry point
+│   ├── package.json        # Node dependencies
+│   └── vite.config.js      # Vite configuration
+└── docs/                   # Documentation
+    ├── README.md           # Main documentation
+    ├── VERCEL_DEPLOYMENT_GUIDE.md
+    ├── STREAMLIT_DEPLOYMENT.md
+    └── DEPLOYMENT.md
 ```
 
 ## 🔌 API Endpoints

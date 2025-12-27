@@ -27,8 +27,11 @@ wheels/
 data/raw/
 data/processed/*.json
 !data/processed/.gitkeep
-# Keep vector_db for Vercel deployment (pre-built)
-# data/vector_db/ - COMMENTED OUT for Vercel
+# Keep vector_db for deployment (pre-built)
+# data/vector_db/ - Keep mutual_funds.json, ignore ChromaDB binary files
+data/vector_db/*/
+data/vector_db/chroma.sqlite3
+!data/vector_db/mutual_funds.json
 # Keep funds_database.json (needed for deployment)
 !data/storage/funds_database.json
 
